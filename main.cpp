@@ -6,6 +6,9 @@
 #include <stack>
 #include <vector>
 
+#include "tree.h"
+
+
 typedef enum
 {
 	fBlack = 30, fRed, fGreen, fYellow, fBlue, fMagenta, fCyan, fWhite,
@@ -37,17 +40,19 @@ static inline void rtrim(std::string &s);
 static inline void trim(std::string &s);
 char* dec_text(const char* cstr, TextParam fg, TextParam bg);
 void init_clean(std::string& str);
-void ll1_parser(const char* data);
+Tree<Symbol,std::string>* ll1_parser(const char* data);
 Token lexer(const char* data, size_t index);
 void init_parsing_table(GrammarTbl& tbl);
 
 int main()
 {
-	std::string str = "dir1/dir_2/myprg text $varia_b1e___   _key= 13 -help # TODO";
+	std::string str = "cat huy=PISHOV_NAHUY #./*.txt";
 	init_clean(str);
-	ll1_parser(str.c_str());
+	auto* syntax = ll1_parser(str.c_str());
 
+	std::cout << " " << std::endl;
 
+	delete syntax;
 	return 0;
 }
 
@@ -79,40 +84,69 @@ char* dec_text(const char* cstr, TextParam fg, TextParam bg)
 void init_clean(std::string& str)
 {
 	trim(str);
-	str.insert(0, "."); // TODO: if LINE -> PRG ARGS
+	char grps_n = 1, prevc = str[0];
+	for (const char c: str)
+	{
+		if (c == '=')
+		{
+			prevc = c;
+			break;
+		}
+		grps_n += isspace(prevc) && !isspace(c) ? 1 : 0;
+		prevc = c;
+	}
+	if (grps_n > 1 || prevc != '=') str.insert(0, ".");
 }
 
-void ll1_parser(const char* data)
+Tree<Symbol,std::string>* ll1_parser(const char* data)
 {
+	Tree<Symbol,std::string>* cursor;
 	GrammarTbl table;
-	size_t index = 0;
+	size_t index = 0, iter = 0;
+
 	std::stack<Symbol> ssmbl;
 	ssmbl.push(T_EOS);
 	ssmbl.push(NT_LINE);
 
+	auto syntax_tree = new Tree<Symbol,std::string>(NT_LINE,std::string());
+	cursor = syntax_tree;
 	init_parsing_table(table);
 
-	while ( !ssmbl.empty() )
-	{
+	while ( !ssmbl.empty() ) {
 		while ( isspace(data[index]) ) ++index;
 		Token tok = lexer(data, index);
 		if ( tok.terminal == ssmbl.top() || tok.terminal == T_EPS )
 		{
 			std::cout << "Matched symbols: " << tok.val << std::endl;
 			index += tok.terminal != T_EPS ? tok.val.size() : 0;
+			cursor->push_front(new Tree<Symbol,std::string>(tok.terminal, tok.val));
 			ssmbl.pop();
 		}
 		else
 		{
 			Prod prod = table[ssmbl.top()][tok.terminal];
+			if ( iter != 0 )
+			{
+				Tree<Symbol,std::string>* lookup = cursor->find(ssmbl.top());
+				while ( lookup == nullptr && !cursor->is_root() )
+				{
+					cursor = cursor->parent;
+					lookup = cursor->find(ssmbl.top());
+				}
+				cursor = lookup;
+			}
+
 			ssmbl.pop();
 			while (!prod.empty())
 			{
 				ssmbl.push(prod.back());
+				cursor->push_front(new Tree<Symbol,std::string>(prod.back(),std::string()));
 				prod.pop_back();
 			}
 		}
+		++iter;
 	}
+	return syntax_tree;
 }
 
 Token lexer(const char* data, size_t index)
