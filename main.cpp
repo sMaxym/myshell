@@ -11,6 +11,8 @@
 #include <iterator>
 #include <readline/history.h>
 #include "argsmap.h"
+#include <readline/readline.h>
+#include <readline/history.h>
 typedef std::map<Symbol, std::vector<std::string>> tree_map_t;
 typedef Tree<Symbol, std::string> tree_t;
 using namespace std;
@@ -130,22 +132,30 @@ static tree_map_t tree2map(Tree<Symbol, std::string>* tr) {
 
 int main(int argc, char* argv[])
 {
+    char* buf;
     while (true) {
-
+        std::stringstream ss;
         auto cwd = std::filesystem::current_path().string();
         if (errno == 0) {
-            std::cout << "\033[1;32m" <<  errno;
+            ss << "\033[1;32m" <<  errno;
         } else {
-            std::cout << "\033[1;31m" <<  errno;
+            ss << "\033[1;31m" <<  errno;
         }
 
-        cout << " " << "\033[0;33m" << cwd;
-        cout << "\033[1;33m" << " $ " << "\033[1;39m";
+        ss << " " << "\033[0;33m" << cwd;
+        ss << "\033[1;33m" << " $ " << "\033[1;39m";
         std::string line = "cat ..";
-        std::getline(std::cin, line, '\n');
+        buf = readline(ss.str().c_str());
 
+        if (buf == nullptr) {
+            std::cout << "Readline error" << std::endl;
+            _exit(EXIT_FAILURE);
+        }
+        line = buf;
         if (line.empty())
             continue;
+        add_history(buf);
+        free(buf);
         init_clean(line);
         auto syntax = ll1_parser(line.c_str());
         ArgsMap args_map(tree2map(syntax->children[0]));
@@ -156,6 +166,7 @@ int main(int argc, char* argv[])
         if (kernel_command(args_map.get_tree_map()) < 0) {
             f(args_map);
         }
+
     }
     return 0;
 }

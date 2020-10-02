@@ -10,3 +10,4 @@ add_executable(myshell main.cpp tree.h syntax_analysis.h
     inter_functions.h argsmap.cpp argsmap.h)
 add_executable(example example.cpp)
 target_link_libraries(example ${Readline_LIBRARY})
+target_link_libraries(myshell ${Readline_LIBRARY})
