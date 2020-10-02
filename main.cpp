@@ -13,7 +13,6 @@
 #include "argsmap.h"
 typedef std::map<Symbol, std::vector<std::string>> tree_map_t;
 typedef Tree<Symbol, std::string> tree_t;
-
 using namespace std;
 
 
@@ -37,8 +36,7 @@ void f(ArgsMap<Symbol, std::vector<std::string>>& arg_map) {
         execvp(prg_name.c_str(), const_cast<char* const*>(arg_for_c.data()));
         exit(EXIT_FAILURE);
     } else {
-        int status;
-        waitpid(pid, &status, 0);
+        waitpid(pid, &errno, 0);
     }
 }
 
@@ -84,6 +82,7 @@ static void recursive_args(Tree<Symbol, std::string>* tr,
                     m[ARGS].push_back(std::string(new_arg));
                 }
             }
+
             else {
                 recursive_file(tr->children[0]->children[0], m, FILE_ARGS);
                 std::string arg;
@@ -95,7 +94,11 @@ static void recursive_args(Tree<Symbol, std::string>* tr,
                 m[ARGS].push_back(arg);
             }
 
-        } else {
+        }
+        else if (tr->children[0]->non_terminal == NT_FLAG) {
+            to_leaf(tr->children[0], m, NT_FLAG);
+        }
+        else {
             to_leaf(tr->children[0], m, ARGS);
         }
         return;
@@ -128,8 +131,16 @@ static tree_map_t tree2map(Tree<Symbol, std::string>* tr) {
 int main(int argc, char* argv[])
 {
     while (true) {
+
         auto cwd = std::filesystem::current_path().string();
-        std::cout << cwd << " $ ";
+        if (errno == 0) {
+            std::cout << "\033[1;32m" <<  errno;
+        } else {
+            std::cout << "\033[1;31m" <<  errno;
+        }
+
+        cout << " " << "\033[0;33m" << cwd;
+        cout << "\033[1;33m" << " $ " << "\033[1;39m";
         std::string line = "cat ..";
         std::getline(std::cin, line, '\n');
 

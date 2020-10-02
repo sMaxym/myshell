@@ -15,12 +15,15 @@ public:
     std::pair<std::vector<const char*>, std::string> map2vector() {
         std::vector<const char*> args_for_c;
         std::string prog;
-        for (auto& x: tree_map[PROG]) {
+        for (const auto& x: tree_map[PROG]) {
             prog += x + '/';
         }
         prog.pop_back();
         args_for_c.push_back(prog.c_str());
-        for (auto& x: tree_map[ARGS]) {
+        for (const auto& x: tree_map[ARGS]) {
+            args_for_c.push_back(x.c_str());
+        }
+        for (const auto& x: tree_map[T_FLAG]) {
             args_for_c.push_back(x.c_str());
         }
         for (size_t i = 0; i < tree_map[KEY].size(); ++i) {
