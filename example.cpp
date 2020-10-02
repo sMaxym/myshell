@@ -1,6 +1,13 @@
 #include <iostream>
-int main(int argc, char** argv) {
-    std::cout << "HEllo, World!" << std::endl;
+#include <string>
+#include "syntax_analysis.h"
 
-  return 0;
+int main(int argc, char** argv) {
+	std::string str = "~/prg ~";
+	init_clean(str);
+	auto synt = ll1_parser(str.c_str());
+
+	std::cout << " " << std::endl;
+
+  	return 0;
 }
