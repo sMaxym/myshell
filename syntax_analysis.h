@@ -106,7 +106,6 @@ Tree<Symbol,std::string>* ll1_parser(const char* data)
         Token tok = lexer(data, index);
         if ( tok.terminal == ssmbl.top() || tok.terminal == T_EPS )
         {
-            std::cout << "Matched symbols: " << tok.val << std::endl;
             index += tok.terminal != T_EPS ? tok.val.size() : 0;
             if ( tok.terminal != T_EOS )
             {
