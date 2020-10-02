@@ -81,7 +81,6 @@ static void recursive_args(Tree<Symbol, std::string>* tr,
                     }
 
                 }
-                std::cout << arg << std::endl;
                 arg.pop_back();
                 m[FILE_ARGS].clear();
                 m[ARGS].push_back(arg);

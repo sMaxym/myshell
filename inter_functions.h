@@ -107,9 +107,6 @@ void parse_line(std::string& line, const std::string& cwd) {
     ArgsMap args_map(tree2map(syntax->children[0]));
 
     args_map.get_tree_map()[CURRENT_PATH].push_back(cwd);
-//            for (auto& x: args_map.get_tree_map()) {
-//                std::cout << x.first << " " << x.second << std::endl;
-//            }
     if (kernel_command(args_map.get_tree_map()) < 0) {
         handle_exec(args_map);
     }
