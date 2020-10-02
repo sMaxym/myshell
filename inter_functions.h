@@ -63,7 +63,7 @@ int mecho(tree_map_t& tree_map)
 
 int mexport(tree_map_t& tree_map)
 {
-    std::string text = "mecho [-h|--help] [text|$<var_name>] [text|$<var_name>]  [text|$<var_name>] ...";
+    std::string text = "mexport [-h|--help] [text|$<var_name>] [text|$<var_name>]  [text|$<var_name>] ...";
     int status = flag_founder(tree_map[NT_FLAG], text, "mecho");
     if (status != 1)
         return status;

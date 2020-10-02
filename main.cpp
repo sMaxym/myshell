@@ -27,7 +27,7 @@ std::ostream& operator<<(ostream& stream, const std::vector<T>& values)
     return stream;
 }
 
-void f(ArgsMap<Symbol, std::vector<std::string>>& arg_map) {
+void handle_exec(ArgsMap<Symbol, std::vector<std::string>>& arg_map) {
     pid_t pid = fork();
     if (pid == -1) {
         std::cout << "Fork failed" << std::endl;
@@ -152,10 +152,10 @@ int main(int argc, char* argv[])
             _exit(EXIT_FAILURE);
         }
         line = buf;
+        free(buf);
         if (line.empty())
             continue;
-        add_history(buf);
-        free(buf);
+        add_history(line.c_str());
         init_clean(line);
         auto syntax = ll1_parser(line.c_str());
         ArgsMap args_map(tree2map(syntax->children[0]));
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
             std::cout << x.first << " " << x.second << std::endl;
         }
         if (kernel_command(args_map.get_tree_map()) < 0) {
-            f(args_map);
+            handle_exec(args_map);
         }
 
     }
