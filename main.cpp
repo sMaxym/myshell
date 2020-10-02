@@ -7,17 +7,17 @@
 #include <iterator>
 #include <readline/readline.h>
 #include <readline/history.h>
-using namespace std;
-
-
-template<class T>
-std::ostream& operator<<(ostream& stream, const std::vector<T>& values)
-{
-    stream << "[ ";
-    copy( begin(values), end(values), ostream_iterator<T>(stream, " ") );
-    stream << ']';
-    return stream;
+namespace cout_vector {
+    template<class T>
+    std::ostream& operator<<(std::ostream& stream, const std::vector<T>& values)
+    {
+        stream << "[ ";
+        copy( begin(values), end(values), std::ostream_iterator<T>(stream, " ") );
+        stream << ']';
+        return stream;
+    }
 }
+using namespace cout_vector;
 
 int add_pwd2path(std::string&& cwd) {
     auto path = getenv("PATH");

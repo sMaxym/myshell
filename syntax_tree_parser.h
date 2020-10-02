@@ -20,7 +20,7 @@ static void to_leaf(tree_t* tree, tree_map_t& trm, Symbol symbol,
 static void recursive_file(Tree<Symbol, std::string>* tr,
                     std::map<Symbol, std::vector<std::string>>& m,
                            Symbol symbol) {
-    if (tr->children.size() != 1) {
+    if (tr->children.size() > 2) {
         recursive_file(tr->children[0], m, symbol);
         recursive_file(tr->children[2], m, symbol);
     }
@@ -28,6 +28,14 @@ static void recursive_file(Tree<Symbol, std::string>* tr,
         to_leaf(tr, m, symbol);
     }
 
+}
+
+std::string find_var(const std::string& var) {
+    auto val = getenv(var.c_str());
+    if (val != nullptr) {
+        return std::string(val);
+    }
+    return std::string();
 }
 
 static void recursive_args(Tree<Symbol, std::string>* tr,
@@ -38,19 +46,28 @@ static void recursive_args(Tree<Symbol, std::string>* tr,
     if (tr->non_terminal == NT_ARG) {
         if (tr->children[0]->non_terminal == NT_KEY) {
             to_leaf(tr->children[0], m, KEY);
-            to_leaf(tr->children[2], m, VALUE);
+            if (tr->children[2]->children[0]->non_terminal == NT_VARCALL)
+            {
+
+                auto new_arg = find_var(
+                            tr->children[2]->children[0]->children[1]->children[0]->terminal
+                        );
+                m[VALUE].push_back(new_arg);
+            }
+            else
+            {
+                to_leaf(tr->children[2], m, VALUE);
+            }
+
         }
         else if (tr->children[0]->non_terminal == NT_VAL)  {
             if (tr->children[0]->children[0]->non_terminal == NT_VARCALL) {
-                auto new_arg = getenv(
+                auto new_arg = find_var(
                             tr->children[0]->children[0]->
-                        children[1]->children[0]->terminal.c_str()
+                        children[1]->children[0]->terminal
                         );
-                if (new_arg != nullptr) {
-                    m[ARGS].push_back(std::string(new_arg));
-                }
+                m[ARGS].push_back(new_arg);
             }
-
             else {
                 recursive_file(tr->children[0]->children[0], m, FILE_ARGS);
                 std::string arg;
@@ -64,6 +81,7 @@ static void recursive_args(Tree<Symbol, std::string>* tr,
                     }
 
                 }
+                std::cout << arg << std::endl;
                 arg.pop_back();
                 m[FILE_ARGS].clear();
                 m[ARGS].push_back(arg);
@@ -116,6 +134,9 @@ void handle_exec(ArgsMap<Symbol, std::vector<std::string>>& arg_map) {
         exit(EXIT_FAILURE);
     } else {
         waitpid(pid, &errno, 0);
+        if (errno == 256) {
+            std::cout << "myshell: command not found: " << arg_map.get_tree_map()[PROG][0] << std::endl;
+        }
     }
 }
 
