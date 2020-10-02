@@ -13,7 +13,7 @@ typedef enum
 {
     fBlack = 30, fRed, fGreen, fYellow, fBlue, fMagenta, fCyan, fWhite,
     bBlack = 40, bRed, bGreen, bYellow, bBlue, bMagenta, bCyan, bWhite,
-    reset = 0
+    reset = 0, fBold
 } TextParam;
 typedef enum
 {
@@ -168,7 +168,7 @@ Token lexer(const char* data, size_t index)
                 else if ( c == '/' ) { val += c; state = 7; done = true; break; }
                 else if ( c == '$' ) { val += c; state = 8; done = true; break; }
                 else if ( c == '&' ) { val += c; state = 9; done = true; break; }
-                else if ( isalpha(c) || isdigit(c) || c == '_' || c == '.') { val += c; state = 4; }
+                else if ( isalpha(c) || isdigit(c) || c == '_' || c == '.'|| c == '~' ) { val += c; state = 4; }
                 else if ( c == '~' || c == '.' ) { val += c; state = 5; }
                 else { done = true; break; };
                 break;
@@ -185,7 +185,7 @@ Token lexer(const char* data, size_t index)
                 else { done = true; break; };
                 break;
             case 4:
-                if ( isalpha(c) || isdigit(c) || c == '_' || c == '.' ) { val += c; state = 4; }
+                if ( isalpha(c) || isdigit(c) || c == '_' || c == '.' || c == '~' ) { val += c; state = 4; }
                 else { done = true; break; };
                 break;
             case 5:

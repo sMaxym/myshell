@@ -11,6 +11,7 @@
 #include <iterator>
 #include <readline/history.h>
 #include "argsmap.h"
+
 typedef std::map<Symbol, std::vector<std::string>> tree_map_t;
 typedef Tree<Symbol, std::string> tree_t;
 
@@ -127,7 +128,7 @@ static tree_map_t tree2map(Tree<Symbol, std::string>* tr) {
 
 int main(int argc, char* argv[])
 {
-    while (true) {
+	while (true) {
         auto cwd = std::filesystem::current_path().string();
         std::cout << cwd << " $ ";
         std::string line = "cat ..";
