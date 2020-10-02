@@ -1,12 +1,14 @@
 #include <vector>
-
+#include <list>
 template <typename Non_terminal_t, typename Terminal_t>
 struct Tree
 {
+    typedef std::vector<Tree<Non_terminal_t, Terminal_t>*> structure_t;
+
     Non_terminal_t non_terminal;
     Terminal_t terminal;
     Tree<Non_terminal_t, Terminal_t>* parent;
-    std::vector<Tree<Non_terminal_t, Terminal_t>*> children;
+    structure_t children;
     Tree() = default;
     Tree(const Non_terminal_t& data1, const Terminal_t& data2): non_terminal(data1), terminal(data2){}
     ~Tree()=default;
@@ -19,7 +21,7 @@ struct Tree
 
 	void push_front(Tree<Non_terminal_t,Terminal_t>* node)
 	{
-		children.insert(children.begin(), node);
+        children.insert(children.begin(), node);
 		node->parent = this;
 	}
 
