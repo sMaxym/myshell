@@ -26,9 +26,9 @@ static std::unordered_map<std::string, command_t> commands_map = {
     {"mcd", mcd_t},
     {"merrno", merrno_t}
 };
-void mecho(const std::vector<std::string>& args, bool help=false)
+void mecho(tree_map_t& tree_map)
 {
-    for (const auto& x: args) {
+    for (const auto& x: tree_map[ARGS]) {
         std::cout << x << " ";
     }
 }
@@ -39,7 +39,10 @@ void mexport(tree_map_t& tree_map)
 }
 
 void mexit(tree_map_t& tree_map) {
-    exit(0);
+    std::stringstream ss(tree_map[ARGS][0]);
+    int x;
+    ss >> x;
+    exit(x);
 }
 
 void mpwd(tree_map_t& tree_map) {
@@ -47,20 +50,22 @@ void mpwd(tree_map_t& tree_map) {
 }
 
 void mcd(tree_map_t& tree_map) {
-    chdir(tree_map[ARGS][0].c_str());
+    errno = chdir(tree_map[ARGS][0].c_str());
 }
 
 void merrno() {
-    std::cout << 1 << std::endl;
+    std::cout << errno << std::endl;
 }
 
 
 int kernel_command(tree_map_t& tree_map) {
     if (commands_map.find(tree_map[PROG][0]) == commands_map.end()) {
+
         return -1;
     }
     switch(commands_map[tree_map[PROG][0]]) {
         case mecho_t:
+            mecho(tree_map);
             break;
         case mexport_t:
             mexport(tree_map);
@@ -70,9 +75,12 @@ int kernel_command(tree_map_t& tree_map) {
             break;
         case mpwd_t:
             mpwd(tree_map);
+            break;
         case mcd_t:
+            mcd(tree_map);
             break;
         case merrno_t:
+            merrno();
             break;
         default:
             break;

@@ -33,12 +33,12 @@ void f(ArgsMap<Symbol, std::vector<std::string>>& arg_map) {
         exit(EXIT_FAILURE);
     }
     if (pid == 0) {
-        auto path_ptr = getenv("PATH");
-        std::string path_var;
-        if(path_ptr != nullptr)
-           path_var = path_ptr;
-        path_var += arg_map.get_tree_map()[CURRENT_PATH][0];
-        setenv("PATH", path_var.c_str(), 1);
+//        auto path_ptr = getenv("PATH");
+//        std::string path_var;
+//        if(path_ptr != nullptr)
+//           path_var = path_ptr;
+//        path_var += arg_map.get_tree_map()[CURRENT_PATH][0];
+//        setenv("PATH", path_var.c_str(), 1);
         auto [arg_for_c, prg_name] = arg_map.map2vector();
         execvp(prg_name.c_str(), const_cast<char* const*>(arg_for_c.data()));
         exit(EXIT_FAILURE);
@@ -77,12 +77,13 @@ static void recursive_args(Tree<Symbol, std::string>* tr,
             to_leaf(tr->children[2], m, VALUE);
         }
         else if (tr->children[0]->non_terminal == NT_VAL)  {
-
-            auto cursor = tr;
-            while (cursor->non_terminal != NT_VARCALL) {
-                cursor = cursor->children[0];
+            if (tr->children[0]->children[0]->non_terminal == NT_VARCALL) {
+                m[VARS].push_back(tr->children[0]->children[0]->children[1]->terminal);
             }
-            to_leaf(cursor->children[1], m, VARS);
+            else {
+                to_leaf(tr->children[0], m, ARGS);
+            }
+
         } else {
             to_leaf(tr->children[0], m, ARGS);
         }
@@ -118,7 +119,7 @@ int main(int argc, char* argv[])
     while (true) {
         auto cwd = std::filesystem::current_path().string();
         std::cout << cwd << " $ ";
-        std::string line = "cat $PATH";
+        std::string line = "cat ..";
         std::getline(std::cin, line, '\n');
 
         if (line.empty())
@@ -126,7 +127,8 @@ int main(int argc, char* argv[])
         init_clean(line);
         auto syntax = ll1_parser(line.c_str());
         ArgsMap args_map(tree2map(syntax->children[0]));
-        args_map.find_vars().get_tree_map()[CURRENT_PATH].push_back(cwd);
+        args_map.find_vars();
+        args_map.get_tree_map()[CURRENT_PATH].push_back(cwd);
         for (auto& x: args_map.get_tree_map()) {
             std::cout << x.first << " " << x.second << std::endl;
         }
