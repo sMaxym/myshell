@@ -1,4 +1,0 @@
-/home/shakhov/os_course/labs/myshell/build-myshell-Desktop-Debug/CMakeFiles/rebuild_cache.dir
-/home/shakhov/os_course/labs/myshell/build-myshell-Desktop-Debug/CMakeFiles/edit_cache.dir
-/home/shakhov/os_course/labs/myshell/build-myshell-Desktop-Debug/CMakeFiles/example.dir
-/home/shakhov/os_course/labs/myshell/build-myshell-Desktop-Debug/CMakeFiles/myshell.dir
