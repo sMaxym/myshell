@@ -27,7 +27,7 @@ std::ostream& operator<<(ostream& stream, const std::vector<T>& values)
     return stream;
 }
 
-void f(ArgsMap<Symbol, std::vector<std::string>>& arg_map) {
+void handle_exec(ArgsMap<Symbol, std::vector<std::string>>& arg_map) {
     pid_t pid = fork();
     if (pid == -1) {
         std::cout << "Fork failed" << std::endl;
@@ -89,7 +89,14 @@ static void recursive_args(Tree<Symbol, std::string>* tr,
                 recursive_file(tr->children[0]->children[0], m, FILE_ARGS);
                 std::string arg;
                 for (auto& x: m[FILE_ARGS]) {
-                    arg += x + '/';
+                    if (x == "~") {
+                        auto home_dir = getenv("HOME");
+                        arg += std::string(home_dir) + '/';
+                    }
+                    else {
+                        arg += x + '/';
+                    }
+
                 }
                 arg.pop_back();
                 m[FILE_ARGS].clear();
@@ -129,9 +136,53 @@ static tree_map_t tree2map(Tree<Symbol, std::string>* tr) {
     }
     return m;
 }
+#include <fstream>
+
+void parse_line(std::string& line, const std::string& cwd) {
+
+    init_clean(line);
+    auto syntax = ll1_parser(line.c_str());
+    ArgsMap args_map(tree2map(syntax->children[0]));
+    args_map.get_tree_map()[CURRENT_PATH].push_back(cwd);
+//            for (auto& x: args_map.get_tree_map()) {
+//                std::cout << x.first << " " << x.second << std::endl;
+//            }
+    if (kernel_command(args_map.get_tree_map()) < 0) {
+        handle_exec(args_map);
+    }
+}
+
+int add_pwd2path(std::string&& cwd) {
+    auto path = getenv("PATH");
+    if (path == nullptr) {
+        return 1;
+    }
+    std::string str_path(path);
+    str_path += ':' + std::filesystem::current_path().string() + cwd;
+    return setenv("PATH", str_path.c_str(), 1);
+
+}
 
 int main(int argc, char* argv[])
 {
+    if (add_pwd2path(std::string(argv[0])) != 0)
+    {
+        std::cout << "Failed to add PATH" << std::endl;
+        return -1;
+    }
+    if (argc > 1) {
+        std::string prg_name = argv[1];
+        std::string line;
+        std::ifstream ifile(prg_name);
+        while (getline(ifile, line, '\n')) {
+            if (line.empty()) {
+                continue;
+            }
+            auto cwd = std::filesystem::current_path().string();
+            parse_line(line, cwd);
+        }
+        return 0;
+    }
     char* buf;
     while (true) {
         std::stringstream ss;
@@ -152,20 +203,11 @@ int main(int argc, char* argv[])
             _exit(EXIT_FAILURE);
         }
         line = buf;
+        free(buf);
         if (line.empty())
             continue;
-        add_history(buf);
-        free(buf);
-        init_clean(line);
-        auto syntax = ll1_parser(line.c_str());
-        ArgsMap args_map(tree2map(syntax->children[0]));
-        args_map.get_tree_map()[CURRENT_PATH].push_back(cwd);
-        for (auto& x: args_map.get_tree_map()) {
-            std::cout << x.first << " " << x.second << std::endl;
-        }
-        if (kernel_command(args_map.get_tree_map()) < 0) {
-            f(args_map);
-        }
+        add_history(line.c_str());
+        parse_line(line, cwd);
 
     }
     return 0;

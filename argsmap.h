@@ -1,7 +1,7 @@
 #ifndef ARGSMAP_H
 #define ARGSMAP_H
 #include "syntax_analysis.h"
-
+#include <algorithm>
 template <typename T, typename U>
 class ArgsMap
 {
@@ -15,10 +15,19 @@ public:
     std::pair<std::vector<const char*>, std::string> map2vector() {
         std::vector<const char*> args_for_c;
         std::string prog;
-        for (const auto& x: tree_map[PROG]) {
+        std::string prog_name = tree_map[PROG][tree_map[PROG].size() - 1];
+        size_t ind = prog_name.find('.');
+        for (const auto& x: tree_map[PROG])
+        {
             prog += x + '/';
+            prog.pop_back();
         }
-        prog.pop_back();
+        if (ind != std::string::npos && prog_name.substr(ind) == "msh")
+        {
+            tree_map[ARGS].insert(tree_map[ARGS].begin(), prog);
+            prog = "myshell";
+        }
+
         args_for_c.push_back(prog.c_str());
         for (const auto& x: tree_map[ARGS]) {
             args_for_c.push_back(x.c_str());

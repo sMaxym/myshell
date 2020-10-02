@@ -63,7 +63,7 @@ int mecho(tree_map_t& tree_map)
 
 int mexport(tree_map_t& tree_map)
 {
-    std::string text = "mecho [-h|--help] [text|$<var_name>] [text|$<var_name>]  [text|$<var_name>] ...";
+    std::string text = "mexport [-h|--help] [text|$<var_name>] [text|$<var_name>]  [text|$<var_name>] ...";
     int status = flag_founder(tree_map[NT_FLAG], text, "mecho");
     if (status != 1)
         return status;
@@ -72,7 +72,10 @@ int mexport(tree_map_t& tree_map)
         return 0;
     }
     for (size_t i = 0; i < tree_map[KEY].size(); ++i) {
-        setenv(tree_map[KEY][i].c_str(), tree_map[VALUE][i].c_str(), 1);
+        int status = setenv(tree_map[KEY][i].c_str(), tree_map[VALUE][i].c_str(), 1);
+        if (status != 0) {
+            return status;
+        }
     }
     return 0;
 }
