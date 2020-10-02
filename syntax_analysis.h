@@ -75,6 +75,7 @@ void init_clean(std::string& str)
 {
     trim(str);
     char grps_n = 1, prevc = str[0];
+    if (prevc == '#') return;
     for (const char c: str)
     {
         if (c == '=')
