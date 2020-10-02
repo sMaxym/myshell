@@ -1,1 +1,0 @@
-mycat: failed to open nunematakogofile.txt

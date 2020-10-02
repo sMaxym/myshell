@@ -100,16 +100,20 @@ int mexit(tree_map_t& tree_map) {
 
 }
 
-void parse_line(std::string& line, const std::string& cwd) {
+int parse_line(std::string& line, const std::string& cwd) {
 
     init_clean(line);
     auto syntax = ll1_parser(line.c_str());
+    if (syntax->children.size() == 1) {
+        return 1;
+    }
     ArgsMap args_map(tree2map(syntax->children[0]));
 
     args_map.get_tree_map()[CURRENT_PATH].push_back(cwd);
     if (kernel_command(args_map.get_tree_map()) < 0) {
         handle_exec(args_map);
     }
+    return 0;
 }
 
 int run_script(const std::string& script) {
@@ -120,7 +124,8 @@ int run_script(const std::string& script) {
             continue;
         }
         auto cwd = std::filesystem::current_path().string();
-        parse_line(line, cwd);
+        if (parse_line(line, cwd) == 1)
+            continue;
     }
     return 0;
 }
@@ -156,8 +161,8 @@ int merrno(tree_map_t& tree_map) {
 
 
 int kernel_command(tree_map_t& tree_map) {
-    if (commands_map.find(tree_map[PROG][0]) == commands_map.end()) {
-
+    if ((tree_map[PROG].size() > 1) ||
+            (commands_map.find(tree_map[PROG][0]) == commands_map.end())) {
         return -1;
     }
     switch(commands_map[tree_map[PROG][0]]) {

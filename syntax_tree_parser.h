@@ -133,9 +133,6 @@ void handle_exec(ArgsMap<Symbol, std::vector<std::string>>& arg_map) {
         exit(EXIT_FAILURE);
     } else {
         waitpid(pid, &errno, 0);
-        if (errno == 256) {
-            std::cout << "myshell: command not found: " << arg_map.get_tree_map()[PROG][0] << std::endl;
-        }
     }
 }
 
