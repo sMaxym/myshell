@@ -1,4 +1,5 @@
 # Лабораторна робота myshell
+Виконали: Шахов Михайло, Шумаков Максим, Тітов Ігор
 ![Alt text](/media/header.png?raw=true "Optional Title")
 ## Структура LL(1) граматики:
 ```java
