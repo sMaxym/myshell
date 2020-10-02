@@ -20,9 +20,9 @@ public:
         for (const auto& x: tree_map[PROG])
         {
             prog += x + '/';
-            prog.pop_back();
         }
-        if (ind != std::string::npos && prog_name.substr(ind) == "msh")
+        prog.pop_back();
+        if (ind != std::string::npos && prog_name.substr(ind) == ".msh")
         {
             tree_map[ARGS].insert(tree_map[ARGS].begin(), prog);
             prog = "myshell";

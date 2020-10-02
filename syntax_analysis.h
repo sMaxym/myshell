@@ -186,7 +186,7 @@ Token lexer(const char* data, size_t index)
                 else { done = true; break; };
                 break;
             case 4:
-                if ( isalpha(c) || isdigit(c) || c == '_' || c == '.' || c == '~' ) { val += c; state = 4; }
+                if ( isalpha(c) || isdigit(c) || c == '_' || c == '.' || c == '~' || c=='-' ) { val += c; state = 4; }
                 else { done = true; break; };
                 break;
             case 5:
