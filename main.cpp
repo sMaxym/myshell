@@ -89,7 +89,14 @@ static void recursive_args(Tree<Symbol, std::string>* tr,
                 recursive_file(tr->children[0]->children[0], m, FILE_ARGS);
                 std::string arg;
                 for (auto& x: m[FILE_ARGS]) {
-                    arg += x + '/';
+                    if (x == "~") {
+                        auto home_dir = getenv("HOME");
+                        arg += std::string(home_dir) + '/';
+                    }
+                    else {
+                        arg += x + '/';
+                    }
+
                 }
                 arg.pop_back();
                 m[FILE_ARGS].clear();
@@ -129,9 +136,36 @@ static tree_map_t tree2map(Tree<Symbol, std::string>* tr) {
     }
     return m;
 }
+#include <fstream>
 
+void parse_line(std::string& line, const std::string& cwd) {
+
+    init_clean(line);
+    auto syntax = ll1_parser(line.c_str());
+    ArgsMap args_map(tree2map(syntax->children[0]));
+    args_map.get_tree_map()[CURRENT_PATH].push_back(cwd);
+//            for (auto& x: args_map.get_tree_map()) {
+//                std::cout << x.first << " " << x.second << std::endl;
+//            }
+    if (kernel_command(args_map.get_tree_map()) < 0) {
+        handle_exec(args_map);
+    }
+}
 int main(int argc, char* argv[])
 {
+    if (argc > 1) {
+        std::string prg_name = argv[1];
+        std::string line;
+        std::ifstream ifile(prg_name);
+        while (getline(ifile, line, '\n')) {
+            if (line.empty()) {
+                continue;
+            }
+            auto cwd = std::filesystem::current_path().string();
+            parse_line(line, cwd);
+        }
+        return 0;
+    }
     char* buf;
     while (true) {
         std::stringstream ss;
@@ -156,16 +190,7 @@ int main(int argc, char* argv[])
         if (line.empty())
             continue;
         add_history(line.c_str());
-        init_clean(line);
-        auto syntax = ll1_parser(line.c_str());
-        ArgsMap args_map(tree2map(syntax->children[0]));
-        args_map.get_tree_map()[CURRENT_PATH].push_back(cwd);
-        for (auto& x: args_map.get_tree_map()) {
-            std::cout << x.first << " " << x.second << std::endl;
-        }
-        if (kernel_command(args_map.get_tree_map()) < 0) {
-            handle_exec(args_map);
-        }
+        parse_line(line, cwd);
 
     }
     return 0;
