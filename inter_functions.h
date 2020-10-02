@@ -31,6 +31,7 @@ void mecho(tree_map_t& tree_map)
     for (const auto& x: tree_map[ARGS]) {
         std::cout << x << " ";
     }
+    std::cout << std::endl;
 }
 
 void mexport(tree_map_t& tree_map)

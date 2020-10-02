@@ -33,12 +33,6 @@ void f(ArgsMap<Symbol, std::vector<std::string>>& arg_map) {
         exit(EXIT_FAILURE);
     }
     if (pid == 0) {
-//        auto path_ptr = getenv("PATH");
-//        std::string path_var;
-//        if(path_ptr != nullptr)
-//           path_var = path_ptr;
-//        path_var += arg_map.get_tree_map()[CURRENT_PATH][0];
-//        setenv("PATH", path_var.c_str(), 1);
         auto [arg_for_c, prg_name] = arg_map.map2vector();
         execvp(prg_name.c_str(), const_cast<char* const*>(arg_for_c.data()));
         exit(EXIT_FAILURE);
@@ -57,12 +51,16 @@ static void to_leaf(tree_t* tree, tree_map_t& trm, Symbol symbol,
     trm[symbol].push_back(cursor->terminal);
 }
 static void recursive_file(Tree<Symbol, std::string>* tr,
-                    std::map<Symbol, std::vector<std::string>>& m) {
+                    std::map<Symbol, std::vector<std::string>>& m,
+                           Symbol symbol) {
     if (tr->children.size() != 1) {
-        recursive_file(tr->children[0], m);
-        recursive_file(tr->children[2], m);
+        recursive_file(tr->children[0], m, symbol);
+        recursive_file(tr->children[2], m, symbol);
     }
-    to_leaf(tr, m, PROG);
+    else {
+        to_leaf(tr, m, symbol);
+    }
+
 }
 
 
@@ -78,10 +76,23 @@ static void recursive_args(Tree<Symbol, std::string>* tr,
         }
         else if (tr->children[0]->non_terminal == NT_VAL)  {
             if (tr->children[0]->children[0]->non_terminal == NT_VARCALL) {
-                m[VARS].push_back(tr->children[0]->children[0]->children[1]->terminal);
+                auto new_arg = getenv(
+                            tr->children[0]->children[0]->
+                        children[1]->children[0]->terminal.c_str()
+                        );
+                if (new_arg != nullptr) {
+                    m[ARGS].push_back(std::string(new_arg));
+                }
             }
             else {
-                to_leaf(tr->children[0], m, ARGS);
+                recursive_file(tr->children[0]->children[0], m, FILE_ARGS);
+                std::string arg;
+                for (auto& x: m[FILE_ARGS]) {
+                    arg += x + '/';
+                }
+                arg.pop_back();
+                m[FILE_ARGS].clear();
+                m[ARGS].push_back(arg);
             }
 
         } else {
@@ -105,7 +116,7 @@ static tree_map_t tree2map(Tree<Symbol, std::string>* tr) {
     }
 
     else if (tr->children[1]->non_terminal == NT_PRG) {
-        recursive_file(tr->children[1], m);
+        recursive_file(tr->children[1], m, PROG);
     }
 
     if (tr->children[2]->non_terminal == NT_ARGS) {
@@ -127,7 +138,6 @@ int main(int argc, char* argv[])
         init_clean(line);
         auto syntax = ll1_parser(line.c_str());
         ArgsMap args_map(tree2map(syntax->children[0]));
-        args_map.find_vars();
         args_map.get_tree_map()[CURRENT_PATH].push_back(cwd);
         for (auto& x: args_map.get_tree_map()) {
             std::cout << x.first << " " << x.second << std::endl;

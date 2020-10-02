@@ -1,6 +1,3 @@
-#ifndef SYNTAX_ANALYSIS_H
-#define SYNTAX_ANALYSIS_H
-
 #include <iostream>
 #include <cstdio>
 #include <cstring>
@@ -28,7 +25,7 @@ typedef enum
     T_COM, T_LITERAL, T_FLAG, T_DIR, T_KEY, T_EOS, T_EQ, T_DOT,
     T_SLASH, T_DOLLAR, T_EPS,
     // Misha
-    PROG, KEY, VALUE, ARGS, VARS, CURRENT_PATH
+    PROG, KEY, VALUE, ARGS, VARS, CURRENT_PATH, FILE_ARGS
 } Symbol;
 
 typedef struct
@@ -48,7 +45,6 @@ void init_clean(std::string& str);
 Tree<Symbol,std::string>* ll1_parser(const char* data);
 Token lexer(const char* data, size_t index);
 void init_parsing_table(GrammarTbl& tbl);
-
 
 static inline void ltrim(std::string& s)
 {
@@ -79,9 +75,6 @@ void init_clean(std::string& str)
 {
     trim(str);
     char grps_n = 1, prevc = str[0];
-    if (str[0] == '/') {
-        str.insert(str.begin(), '~');
-    }
     for (const char c: str)
     {
         if (c == '=')
@@ -92,7 +85,7 @@ void init_clean(std::string& str)
         grps_n += isspace(prevc) && !isspace(c) ? 1 : 0;
         prevc = c;
     }
-    if (grps_n > 1 || prevc != '=') str.insert(0, ".");
+    if (grps_n > 1 || prevc != '=') str.insert(0, "&");
 }
 
 Tree<Symbol,std::string>* ll1_parser(const char* data)
@@ -174,11 +167,16 @@ Token lexer(const char* data, size_t index)
                 else if ( c == '=' ) { val += c; state = 6; done = true; break; }
                 else if ( c == '/' ) { val += c; state = 7; done = true; break; }
                 else if ( c == '$' ) { val += c; state = 8; done = true; break; }
-                else if ( isalpha(c) || isdigit(c) || c == '_' ) { val += c; state = 4; }
+                else if ( c == '&' ) { val += c; state = 9; done = true; break; }
+                else if ( isalpha(c) || isdigit(c) || c == '_' || c == '.') { val += c; state = 4; }
                 else if ( c == '~' || c == '.' ) { val += c; state = 5; }
                 else { done = true; break; };
                 break;
-            case 1: case 2:
+            case 1:
+                if ( isalpha(c) || isdigit(c) || c == '_' || c == '-' ) { val += c; state = 2; }
+                else { done = true; break; };
+                break;
+            case 2:
                 if ( isalpha(c) || isdigit(c) || c == '_' ) { val += c; state = 2; }
                 else { done = true; break; };
                 break;
@@ -187,8 +185,7 @@ Token lexer(const char* data, size_t index)
                 else { done = true; break; };
                 break;
             case 4:
-                if ( isalpha(c) || isdigit(c) || c == '_' ) { val += c; state = 4; }
-                else if ( c == '.' ) { val += c; state = 5; }
+                if ( isalpha(c) || isdigit(c) || c == '_' || c == '.' ) { val += c; state = 4; }
                 else { done = true; break; };
                 break;
             case 5:
@@ -206,11 +203,11 @@ Token lexer(const char* data, size_t index)
             else if	( *(data + index - 1) == '=' && st_i ) 	tok.terminal = T_KEY;
             else											tok.terminal = T_LITERAL;
             break;
-        case 5: tok.terminal = st_i ? T_DIR : T_DOT;
-            break;
+        case 5:	tok.terminal = T_DIR; 			break;
         case 6: tok.terminal = T_EQ;			break;
         case 7: tok.terminal = T_SLASH;			break;
         case 8: tok.terminal = T_DOLLAR; 		break;
+        case 9: tok.terminal = T_DOT;			break;
         default: break;
     }
     return tok;
@@ -229,19 +226,18 @@ void init_parsing_table(GrammarTbl& tbl)
     tbl[NT_PRGNAME][T_LITERAL]=																	{T_LITERAL};
     tbl[NT_DIR][T_DIR]=																			{T_DIR};
     tbl[NT_ARGS][T_EOS]=tbl[NT_ARGS][T_COM]=													{T_EPS};
-    tbl[NT_ARGS][T_KEY]=tbl[NT_ARGS][T_FLAG]=tbl[NT_ARGS][T_DOLLAR]=tbl[NT_ARGS][T_LITERAL]=	{NT_ARG,NT_ARGS};
+    tbl[NT_ARGS][T_DIR]=tbl[NT_ARGS][T_KEY]=tbl[NT_ARGS][T_FLAG]=
+            tbl[NT_ARGS][T_DOLLAR]=tbl[NT_ARGS][T_LITERAL]=										{NT_ARG,NT_ARGS};
     tbl[NT_ARG][T_KEY]=																			{NT_KEY,T_EQ,NT_VAL};
     tbl[NT_ARG][T_FLAG]=																		{NT_FLAG};
-    tbl[NT_ARG][T_DOLLAR]=tbl[NT_ARG][T_LITERAL]=												{NT_VAL};
+    tbl[NT_ARG][T_DIR]=tbl[NT_ARG][T_DOLLAR]=tbl[NT_ARG][T_LITERAL]=							{NT_VAL};
     tbl[NT_KEY][T_KEY]=																			{T_KEY};
     tbl[NT_FLAG][T_FLAG]=																		{T_FLAG};
     tbl[NT_VAR][T_LITERAL]=																		{T_LITERAL};
     tbl[NT_VAL][T_DOLLAR]=																		{NT_VARCALL};
-    tbl[NT_VAL][T_LITERAL]=																		{T_LITERAL};
+    tbl[NT_VAL][T_DIR]=tbl[NT_VAL][T_LITERAL]=													{NT_PRG};
     tbl[NT_VALNULLABLE][T_EOS]=tbl[NT_VALNULLABLE][T_COM]=										{T_EPS};
-    tbl[NT_VALNULLABLE][T_DOLLAR]=tbl[NT_VALNULLABLE][T_LITERAL]=								{NT_VAL};
+    tbl[NT_VALNULLABLE][T_DIR]=tbl[NT_VALNULLABLE][T_DOLLAR]=tbl[NT_VALNULLABLE][T_LITERAL]=	{NT_VAL};
     tbl[NT_VARCALL][T_DOLLAR]=																	{T_DOLLAR,NT_VAR};
     tbl[NT_LITERAL][T_LITERAL]=																	{T_LITERAL};
 }
-
-#endif // SYNTAX_ANALYSIS_H

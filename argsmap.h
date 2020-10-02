@@ -33,16 +33,6 @@ public:
 
 
     tree_map_t& get_tree_map() { return tree_map; };
-
-    ArgsMap<T, U> find_vars() {
-        for (auto& x: tree_map[VARS]) {
-            auto new_arg = getenv(x.c_str());
-            if (new_arg != nullptr) {
-                tree_map[ARGS].push_back(std::string(new_arg));
-            }
-        }
-        return *this;
-    }
 };
 
 #endif // ARGSMAP_H
