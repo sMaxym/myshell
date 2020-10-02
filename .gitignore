@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+# BUILD
+build-myshell-Desktop-Debug/*
+*.user

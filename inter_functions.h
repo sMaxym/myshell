@@ -4,6 +4,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <unordered_map>
+#include <algorithm>
 #include "argsmap.h"
 
 typedef std::map<Symbol, std::vector<std::string>> tree_map_t;
@@ -26,36 +27,100 @@ static std::unordered_map<std::string, command_t> commands_map = {
     {"mcd", mcd_t},
     {"merrno", merrno_t}
 };
-void mecho(tree_map_t& tree_map)
+
+int flag_founder(const std::vector<std::string>& flags,
+                  const std::string& text,
+                  const std::string& prg_name) {
+    bool help_found = false;
+    for (const auto& flag: flags) {
+        if (flag != "--help" && flag != "-h") {
+            std::cout << prg_name << ": no such option - " << flag << std::endl;
+            return 2;
+        }
+        else {
+            help_found = true;
+        }
+    }
+    if (help_found) {
+        std::cout << text << std::endl;
+
+        return 0;
+    }
+    return 1;
+}
+int mecho(tree_map_t& tree_map)
 {
+    std::string text = "mecho [-h|--help] [text|$<var_name>] [text|$<var_name>]  [text|$<var_name>] ...";
+    int status = flag_founder(tree_map[NT_FLAG], text, "mecho");
+    if (status != 1)
+        return status;
     for (const auto& x: tree_map[ARGS]) {
         std::cout << x << " ";
     }
     std::cout << std::endl;
+    return 0;
 }
 
-void mexport(tree_map_t& tree_map)
+int mexport(tree_map_t& tree_map)
 {
-    setenv(tree_map[KEY][0].c_str(), tree_map[VALUE][0].c_str(), 1);
+    std::string text = "mecho [-h|--help] [text|$<var_name>] [text|$<var_name>]  [text|$<var_name>] ...";
+    int status = flag_founder(tree_map[NT_FLAG], text, "mecho");
+    if (status != 1)
+        return status;
+    if (tree_map[KEY].empty()) {
+
+        return 0;
+    }
+    for (size_t i = 0; i < tree_map[KEY].size(); ++i) {
+        setenv(tree_map[KEY][i].c_str(), tree_map[VALUE][i].c_str(), 1);
+    }
+    return 0;
 }
 
-void mexit(tree_map_t& tree_map) {
-    std::stringstream ss(tree_map[ARGS][0]);
-    int x;
-    ss >> x;
-    exit(x);
+int mexit(tree_map_t& tree_map) {
+    std::string text = "mexit [код завершення] [-h|--help]  – вийти із myshell";
+    int status = flag_founder(tree_map[NT_FLAG], text, "mecho");
+    if (status != 1)
+        return status;
+    if (tree_map[ARGS].empty()) {
+        exit(0);
+    } else {
+        int x;
+        std::stringstream ss(tree_map[ARGS][0]);
+        ss >> x;
+        exit(x);
+    }
+    return 0;
+
 }
 
-void mpwd(tree_map_t& tree_map) {
+int mpwd(tree_map_t& tree_map) {
+    std::string text = "mpwd [-h|--help] – вивести поточний шлях";
+    int status = flag_founder(tree_map[NT_FLAG], text, "mecho");
+    if (status != 1)
+        return status;
     std::cout << tree_map[CURRENT_PATH][0] << std::endl;
+    return 0;
 }
 
-void mcd(tree_map_t& tree_map) {
-    errno = chdir(tree_map[ARGS][0].c_str());
+int mcd(tree_map_t& tree_map) {
+    std::string text = "mcd <path> [-h|--help]  -- перейти до шляху <path>";
+    int status = flag_founder(tree_map[NT_FLAG], text, "mecho");
+    if (status != 1)
+        return status;
+    if (tree_map[ARGS].empty()) {
+        return 0;
+    }
+    return chdir(tree_map[ARGS][0].c_str());
 }
 
-void merrno() {
+int merrno(tree_map_t& tree_map) {
+    std::string text = "merrno [-h|--help]  – вивести код завершення останньої програми чи команди";
+    int status = flag_founder(tree_map[NT_FLAG], text, "mecho");
+    if (status != 1)
+        return status;
     std::cout << errno << std::endl;
+    return 0;
 }
 
 
@@ -66,22 +131,22 @@ int kernel_command(tree_map_t& tree_map) {
     }
     switch(commands_map[tree_map[PROG][0]]) {
         case mecho_t:
-            mecho(tree_map);
+            errno = mecho(tree_map);
             break;
         case mexport_t:
-            mexport(tree_map);
+            errno = mexport(tree_map);
             break;
         case mexit_t:
-            mexit(tree_map);
+            errno = mexit(tree_map);
             break;
         case mpwd_t:
-            mpwd(tree_map);
+            errno = mpwd(tree_map);
             break;
         case mcd_t:
-            mcd(tree_map);
+            errno = mcd(tree_map);
             break;
         case merrno_t:
-            merrno();
+            errno = merrno(tree_map);
             break;
         default:
             break;

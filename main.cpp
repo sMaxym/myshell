@@ -9,12 +9,12 @@
 #include <sstream>
 #include "inter_functions.h"
 #include <iterator>
-#include <readline/history.h>
 #include "argsmap.h"
+#include <readline/readline.h>
+#include <readline/history.h>
 
 typedef std::map<Symbol, std::vector<std::string>> tree_map_t;
 typedef Tree<Symbol, std::string> tree_t;
-
 using namespace std;
 
 
@@ -38,8 +38,7 @@ void f(ArgsMap<Symbol, std::vector<std::string>>& arg_map) {
         execvp(prg_name.c_str(), const_cast<char* const*>(arg_for_c.data()));
         exit(EXIT_FAILURE);
     } else {
-        int status;
-        waitpid(pid, &status, 0);
+        waitpid(pid, &errno, 0);
     }
 }
 
@@ -85,6 +84,7 @@ static void recursive_args(Tree<Symbol, std::string>* tr,
                     m[ARGS].push_back(std::string(new_arg));
                 }
             }
+
             else {
                 recursive_file(tr->children[0]->children[0], m, FILE_ARGS);
                 std::string arg;
@@ -96,7 +96,11 @@ static void recursive_args(Tree<Symbol, std::string>* tr,
                 m[ARGS].push_back(arg);
             }
 
-        } else {
+        }
+        else if (tr->children[0]->non_terminal == NT_FLAG) {
+            to_leaf(tr->children[0], m, NT_FLAG);
+        }
+        else {
             to_leaf(tr->children[0], m, ARGS);
         }
         return;
@@ -128,14 +132,30 @@ static tree_map_t tree2map(Tree<Symbol, std::string>* tr) {
 
 int main(int argc, char* argv[])
 {
-	while (true) {
+    char* buf;
+    while (true) {
+        std::stringstream ss;
         auto cwd = std::filesystem::current_path().string();
-        std::cout << cwd << " $ ";
-        std::string line = "cat ..";
-        std::getline(std::cin, line, '\n');
+        if (errno == 0) {
+            ss << "\033[1;32m" <<  errno;
+        } else {
+            ss << "\033[1;31m" <<  errno;
+        }
 
+        ss << " " << "\033[0;33m" << cwd;
+        ss << "\033[1;33m" << " $ " << "\033[1;39m";
+        std::string line = "cat ..";
+        buf = readline(ss.str().c_str());
+
+        if (buf == nullptr) {
+            std::cout << "Readline error" << std::endl;
+            _exit(EXIT_FAILURE);
+        }
+        line = buf;
         if (line.empty())
             continue;
+        add_history(buf);
+        free(buf);
         init_clean(line);
         auto syntax = ll1_parser(line.c_str());
         ArgsMap args_map(tree2map(syntax->children[0]));
@@ -146,6 +166,7 @@ int main(int argc, char* argv[])
         if (kernel_command(args_map.get_tree_map()) < 0) {
             f(args_map);
         }
+
     }
     return 0;
 }
