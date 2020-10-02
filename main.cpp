@@ -151,8 +151,25 @@ void parse_line(std::string& line, const std::string& cwd) {
         handle_exec(args_map);
     }
 }
+
+int add_pwd2path(std::string&& cwd) {
+    auto path = getenv("PATH");
+    if (path == nullptr) {
+        return 1;
+    }
+    std::string str_path(path);
+    str_path += ':' + std::filesystem::current_path().string() + cwd;
+    return setenv("PATH", str_path.c_str(), 1);
+
+}
+
 int main(int argc, char* argv[])
 {
+    if (add_pwd2path(std::string(argv[0])) != 0)
+    {
+        std::cout << "Failed to add PATH" << std::endl;
+        return -1;
+    }
     if (argc > 1) {
         std::string prg_name = argv[1];
         std::string line;

@@ -72,7 +72,10 @@ int mexport(tree_map_t& tree_map)
         return 0;
     }
     for (size_t i = 0; i < tree_map[KEY].size(); ++i) {
-        setenv(tree_map[KEY][i].c_str(), tree_map[VALUE][i].c_str(), 1);
+        int status = setenv(tree_map[KEY][i].c_str(), tree_map[VALUE][i].c_str(), 1);
+        if (status != 0) {
+            return status;
+        }
     }
     return 0;
 }
