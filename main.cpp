@@ -9,10 +9,10 @@
 #include <sstream>
 #include "inter_functions.h"
 #include <iterator>
-#include <readline/history.h>
 #include "argsmap.h"
 #include <readline/readline.h>
 #include <readline/history.h>
+
 typedef std::map<Symbol, std::vector<std::string>> tree_map_t;
 typedef Tree<Symbol, std::string> tree_t;
 using namespace std;
