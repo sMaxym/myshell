@@ -7,6 +7,10 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include "wildcards.h"
+#include <iostream>
+#include <fcntl.h>
+#include <sstream>
 typedef std::map<Symbol, std::vector<std::string>> tree_map_t;
 typedef Tree<Symbol, std::string> tree_t;
 static void to_leaf(tree_t* tree, tree_map_t& trm, Symbol symbol,
@@ -71,19 +75,36 @@ static void recursive_args(Tree<Symbol, std::string>* tr,
             else {
                 recursive_file(tr->children[0]->children[0], m, FILE_ARGS);
                 std::string arg;
-                for (auto& x: m[FILE_ARGS]) {
-                    if (x == "~") {
+                std::string mask;
+                for (size_t i = 0; i < m[FILE_ARGS].size(); ++i) {
+                    if (i == 0 && m[FILE_ARGS][i] == "~") {
                         auto home_dir = getenv("HOME");
                         arg += std::string(home_dir) + '/';
                     }
+//                    else if (i == m[FILE_ARGS].size() - 1) {
+//                        mask = m[FILE_ARGS][i];
+//                    }
                     else {
-                        arg += x + '/';
+                        arg += m[FILE_ARGS][i] + '/';
+
                     }
 
                 }
-                arg.pop_back();
+//                if (arg.empty()) {
+//                    arg = ".";
+//                }
+//                else {
+                    arg.pop_back();
+//                }
+
                 m[FILE_ARGS].clear();
                 m[ARGS].push_back(arg);
+//                auto files = wildcard_handler(arg, mask.c_str());
+//                for (const auto& file: files) {
+//                    std::cout << file << std::endl;
+//                    m[ARGS].push_back(arg + '/' + file);
+//                }
+
             }
 
         }
@@ -102,6 +123,18 @@ static void recursive_args(Tree<Symbol, std::string>* tr,
     }
 }
 
+static void recursive_rdcts(Tree<Symbol, std::string>* tr,
+                            std::map<Symbol, std::vector<std::string>>& m) {
+    if (tr->children[0]->is_leaf()) {
+        return;
+    }
+
+    to_leaf(tr->children[0]->children[0], m, T_P_FROM);
+    to_leaf(tr->children[0]->children[1], m, T_RDCT);
+    to_leaf(tr->children[0]->children[2], m, T_P_TO);
+    recursive_rdcts(tr->children[1], m);
+}
+
 static tree_map_t tree2map(Tree<Symbol, std::string>* tr) {
     tree_map_t m;
 
@@ -117,25 +150,16 @@ static tree_map_t tree2map(Tree<Symbol, std::string>* tr) {
     if (tr->children[2]->non_terminal == NT_ARGS) {
         recursive_args(tr->children[2], m);
     }
+
+    if (tr->children[3]->non_terminal == NT_RDCTS) {
+        recursive_rdcts(tr->children[3], m);
+    }
+
+    if (tr->children[4]->non_terminal == T_BG_PRC) {
+        to_leaf(tr->children[4], m, T_BG_PRC);
+    }
     return m;
 }
-
-
-void handle_exec(ArgsMap<Symbol, std::vector<std::string>>& arg_map) {
-    pid_t pid = fork();
-    if (pid == -1) {
-        std::cout << "Fork failed" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    if (pid == 0) {
-        auto [arg_for_c, prg_name] = arg_map.map2vector();
-        execvp(prg_name.c_str(), const_cast<char* const*>(arg_for_c.data()));
-        exit(EXIT_FAILURE);
-    } else {
-        waitpid(pid, &errno, 0);
-    }
-}
-
 
 
 #endif // SYNTAX_TREE_PARSER_H

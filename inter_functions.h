@@ -8,6 +8,10 @@
 #include <fstream>
 #include <filesystem>
 #include "syntax_tree_parser.h"
+#include <boost/algorithm/string.hpp>
+#include "execution.h"
+#include "pipes.h"
+
 int kernel_command(tree_map_t& tree_map);
 enum command_t {
     mecho_t,
@@ -37,7 +41,7 @@ int flag_founder(const std::vector<std::string>& flags,
     bool help_found = false;
     for (const auto& flag: flags) {
         if (flag != "--help" && flag != "-h") {
-            std::cout << prg_name << ": no such option - " << flag << std::endl;
+            std::cerr << prg_name << ": no such option - " << flag << std::endl;
             return 2;
         }
         else {
@@ -45,7 +49,7 @@ int flag_founder(const std::vector<std::string>& flags,
         }
     }
     if (help_found) {
-        std::cout << text << std::endl;
+        std::cerr << text << std::endl;
 
         return 0;
     }
@@ -100,20 +104,17 @@ int mexit(tree_map_t& tree_map) {
 
 }
 
-int parse_line(std::string& line, const std::string& cwd) {
+ArgsMap<Symbol, std::vector<std::string>> parse_line(std::string& line, const std::string& cwd) {
 
     init_clean(line);
     auto syntax = ll1_parser(line.c_str());
     if (syntax->children.size() == 1) {
-        return 1;
+        throw std::runtime_error("bad syntax");
     }
-    ArgsMap args_map(tree2map(syntax->children[0]));
 
-    args_map.get_tree_map()[CURRENT_PATH].push_back(cwd);
-    if (kernel_command(args_map.get_tree_map()) < 0) {
-        handle_exec(args_map);
-    }
-    return 0;
+
+    ArgsMap arg_map(tree2map(syntax->children[0]));
+    return arg_map;
 }
 
 int run_script(const std::string& script) {
@@ -124,8 +125,29 @@ int run_script(const std::string& script) {
             continue;
         }
         auto cwd = std::filesystem::current_path().string();
-        if (parse_line(line, cwd) == 1)
+        try {
+            std::vector<std::string> line_vector;
+            boost::split( line_vector, line.substr(0, line.size() - line.find('#')), boost::is_any_of("|"));
+            std::vector<ArgsMap<Symbol, std::vector<std::string>>> args_maps;
+            for (auto& st: line_vector) {
+                ArgsMap args_map = parse_line(st, cwd);
+                args_map.get_tree_map()[CURRENT_PATH].push_back(cwd);
+                args_maps.push_back(args_map);
+
+            }
+
+            if (args_maps.size() == 1) {
+                if (kernel_command(args_maps[0].get_tree_map()) < 0) {
+                    handle_exec(args_maps[0]);
+                }
+            } else {
+                pipe_handler(args_maps);
+            }
+        }
+        catch (std::runtime_error & e) {
             continue;
+        }
+
     }
     return 0;
 }

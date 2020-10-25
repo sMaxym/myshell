@@ -7,6 +7,10 @@
 #include <iterator>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <boost/algorithm/string.hpp>
+#include "pipes.h"
+#include "execution.h"
+
 namespace cout_vector {
     template<class T>
     std::ostream& operator<<(std::ostream& stream, const std::vector<T>& values)
@@ -19,7 +23,7 @@ namespace cout_vector {
 }
 using namespace cout_vector;
 
-int add_pwd2path(std::string&& cwd) {
+int add_pwd2path(const std::string& cwd) {
     auto path = getenv("PATH");
     if (path == nullptr) {
         return 1;
@@ -38,7 +42,7 @@ int main(int argc, char* argv[])
 {
     if (add_pwd2path(std::string(argv[0])) != 0)
     {
-        std::cout << "Failed to add PATH" << std::endl;
+        std::cerr << "Failed to add PATH" << std::endl;
         return -1;
     }
     if (argc > 1) {
@@ -57,11 +61,11 @@ int main(int argc, char* argv[])
 
         ss << " " << "\033[0;33m" << cwd;
         ss << "\033[1;33m" << " $ " << "\033[1;39m";
-        std::string line = "cat ..";
-        buf = readline(ss.str().c_str());
 
+        buf = readline(ss.str().c_str());
+        std::string line = "ls -9 1> fil1 >&2";
         if (buf == nullptr) {
-            std::cout << "Readline error" << std::endl;
+            std::cerr << "Readline error" << std::endl;
             _exit(EXIT_FAILURE);
         }
         line = buf;
@@ -69,7 +73,24 @@ int main(int argc, char* argv[])
         if (line.empty())
             continue;
         add_history(line.c_str());
-        parse_line(line, cwd);
+        std::vector<std::string> line_vector;
+        boost::split( line_vector, line.substr(0, line.size() - line.find('#')), boost::is_any_of("|"));
+        std::vector<ArgsMap<Symbol, std::vector<std::string>>> args_maps;
+        for (auto& st: line_vector) {
+            ArgsMap args_map = parse_line(st, cwd);
+            args_map.get_tree_map()[CURRENT_PATH].push_back(cwd);
+            args_maps.push_back(args_map);
+
+        }
+
+        if (args_maps.size() == 1) {
+            if (kernel_command(args_maps[0].get_tree_map()) < 0) {
+                handle_exec(args_maps[0]);
+            }
+        } else {
+            pipe_handler(args_maps);
+        }
+
 
     }
     return 0;
