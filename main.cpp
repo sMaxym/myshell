@@ -3,13 +3,14 @@
 #include <filesystem>
 #include <vector>
 #include <sstream>
-#include "inter_functions.h"
+#include "include/inter_functions.h"
 #include <iterator>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <boost/algorithm/string.hpp>
-#include "pipes.h"
-#include "execution.h"
+#include "include/pipes.h"
+#include "include/execution.h"
+#include "include/server.h"
 
 namespace cout_vector {
     template<class T>
@@ -45,10 +46,39 @@ int main(int argc, char* argv[])
         std::cerr << "Failed to add PATH" << std::endl;
         return -1;
     }
-    if (argc > 1) {
+    if (argc == 2) {
         std::string prg_name = argv[1];
+        size_t ind = prg_name.rfind('.');
+        if (ind == std::string::npos || prg_name.substr(ind, prg_name.size() - ind) != ".msh") {
+            std::cerr << "bad file extension!" << std::endl;
+            return 3;
+        }
         return run_script(prg_name);
+    } else if (argc == 4) {
+
+        size_t counter_port =  0;
+        size_t counter_server =0;
+        std::string port;
+        for (size_t i = 1; i < argc; ++i) {
+            if (std::string(argv[i]) == "--port") {counter_port++;}
+            else if (std::string(argv[i]) == "--server") {counter_server++;}
+            else {
+                port = argv[i];
+            }
+        }
+        if (counter_port != 1 || counter_server != 1) {
+            std::cerr << "Bad arguments" << std::endl;
+            return 1;
+        }
+        int port_int;
+        std::stringstream(port) >> port_int;
+        run_server(port_int);
+        return 0;
+    } else if (argc != 1) {
+        std::cerr << "Bad argument number!" << std::endl;
+        return 2;
     }
+
     char* buf;
     while (true) {
         std::stringstream ss;
@@ -66,7 +96,7 @@ int main(int argc, char* argv[])
         std::string line = "ls -9 1> fil1 >&2";
         if (buf == nullptr) {
             std::cerr << "Readline error" << std::endl;
-            _exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE);
         }
         line = buf;
         free(buf);
@@ -76,8 +106,9 @@ int main(int argc, char* argv[])
         std::vector<std::string> line_vector;
         boost::split( line_vector, line.substr(0, line.size() - line.find('#')), boost::is_any_of("|"));
         std::vector<ArgsMap<Symbol, std::vector<std::string>>> args_maps;
+
         for (auto& st: line_vector) {
-            ArgsMap args_map = parse_line(st, cwd);
+            ArgsMap args_map = parse_line(st);
             args_map.get_tree_map()[CURRENT_PATH].push_back(cwd);
             args_maps.push_back(args_map);
 

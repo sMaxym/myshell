@@ -4,9 +4,9 @@
 #include <vector>
 #include <iostream>
 #include <cstdio>
-#include "pipes.h"
-#include "execution.h"
-static void f(int pfd, int fd) {
+#include "../include/pipes.h"
+#include "../include/execution.h"
+void duplicator(int pfd, int fd) {
 
     if (pfd != fd) {
         if (dup2(pfd, fd) == -1)
@@ -39,7 +39,7 @@ void pipe_handler(std::vector<ArgsMap<Symbol, std::vector<std::string>>>& args_m
         else if (pids[i] == 0) {
 
             if (i != 0) {
-                f(pfds[i - 1][0], STDIN_FILENO);
+                duplicator(pfds[i - 1][0], STDIN_FILENO);
             }
             if (i != process_numbers - 1)
             {
@@ -48,7 +48,7 @@ void pipe_handler(std::vector<ArgsMap<Symbol, std::vector<std::string>>>& args_m
                     perror("Failed to close read i");
                 }
 
-                f(pfds[i][1], STDOUT_FILENO);
+                duplicator(pfds[i][1], STDOUT_FILENO);
 
             }
             execution(args_map[i]);

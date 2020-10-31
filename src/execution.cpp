@@ -1,4 +1,4 @@
-#include "execution.h"
+#include "../include/execution.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <sstream>
@@ -50,14 +50,29 @@ void execution(ArgsMap<Symbol, std::vector<std::string>>& arg_map) {
 }
 
 void handle_exec(ArgsMap<Symbol, std::vector<std::string>>& arg_map) {
+    bool is_back = arg_map.get_tree_map()[T_BG_PRC][0] == "&";
+    if (is_back) {
+        signal(SIGCHLD,SIG_IGN);
+//        close(1);
+//        close(2);
+//        close(0);
+    }
     pid_t pid = fork();
     if (pid == -1) {
         std::cerr << "Fork failed" << std::endl;
         exit(EXIT_FAILURE);
     }
     if (pid == 0) {
+        if (is_back) {
+            close(1);
+            close(2);
+            close(0);
+        }
+
         execution(arg_map);
     } else {
-        waitpid(pid, &errno, 0);
+        if (!is_back) {
+            waitpid(pid, &errno, 0);
+        }
     }
 }

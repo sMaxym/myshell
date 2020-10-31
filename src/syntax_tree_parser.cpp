@@ -1,20 +1,7 @@
-#ifndef SYNTAX_TREE_PARSER_H
-#define SYNTAX_TREE_PARSER_H
-#include <map>
-#include "argsmap.h"
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include "wildcards.h"
-#include <iostream>
-#include <fcntl.h>
-#include <sstream>
-typedef std::map<Symbol, std::vector<std::string>> tree_map_t;
-typedef Tree<Symbol, std::string> tree_t;
+#include "../include/syntax_tree_parser.h"
+
 static void to_leaf(tree_t* tree, tree_map_t& trm, Symbol symbol,
-             size_t children_index = 0) {
+             size_t children_index) {
     auto cursor = tree;
     while (!cursor->is_leaf()) {
         cursor = cursor->children[children_index];
@@ -135,7 +122,7 @@ static void recursive_rdcts(Tree<Symbol, std::string>* tr,
     recursive_rdcts(tr->children[1], m);
 }
 
-static tree_map_t tree2map(Tree<Symbol, std::string>* tr) {
+tree_map_t tree2map(Tree<Symbol, std::string>* tr) {
     tree_map_t m;
 
     if (tr->children[1]->non_terminal == NT_VAR) {
@@ -160,6 +147,3 @@ static tree_map_t tree2map(Tree<Symbol, std::string>* tr) {
     }
     return m;
 }
-
-
-#endif // SYNTAX_TREE_PARSER_H

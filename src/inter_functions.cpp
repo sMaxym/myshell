@@ -1,39 +1,4 @@
-#ifndef INTER_FUNCTIONS_H
-#define INTER_FUNCTIONS_H
-#include <vector>
-#include <iostream>
-#include <unistd.h>
-#include <unordered_map>
-#include <algorithm>
-#include <fstream>
-#include <filesystem>
-#include "syntax_tree_parser.h"
-#include <boost/algorithm/string.hpp>
-#include "execution.h"
-#include "pipes.h"
-
-int kernel_command(tree_map_t& tree_map);
-enum command_t {
-    mecho_t,
-    mexport_t,
-    mexit_t,
-    mpwd_t,
-    mcd_t,
-    merrno_t,
-    run_script_t
-
-};
-
-static std::unordered_map<std::string, command_t> commands_map = {
-    {"mecho", mecho_t},
-    {"merrno", merrno_t},
-    {"mexit", mexit_t},
-    {"mexport", mexport_t},
-    {"mpwd", mpwd_t},
-    {"mcd", mcd_t},
-    {"merrno", merrno_t},
-    {".", run_script_t}
-};
+#include "../include/inter_functions.h"
 
 int flag_founder(const std::vector<std::string>& flags,
                   const std::string& text,
@@ -75,11 +40,64 @@ int mexport(tree_map_t& tree_map)
     if (status != 1)
         return status;
     if (tree_map[KEY].empty()) {
-
         return 0;
     }
     for (size_t i = 0; i < tree_map[KEY].size(); ++i) {
-        int status = setenv(tree_map[KEY][i].c_str(), tree_map[VALUE][i].c_str(), 1);
+        if (tree_map[VALUE][i][0] == 'A') {
+            std::string line = tree_map[VALUE][i].substr(1);
+            int p[2];
+            if(pipe(p) < 0) {
+                std::cerr << "Failed to pipe"<< std::endl;
+                return 1;
+            }
+            auto args_maps = line2argsmap(line, tree_map[CURRENT_PATH][0]);
+
+            pid_t pid = fork();
+            if (pid == -1) {
+                std::cerr << "Failed to fork"<< std::endl;
+                return 2;
+            }
+            else if (pid == 0) {
+                if(args_maps.size() == 1) {
+                    if (close(p[0]) == -1){
+                        perror("Failed to close read i");
+                    }
+                    duplicator(p[1], STDOUT_FILENO);
+                    execution(args_maps[0]);
+                } else {
+
+                }
+
+
+            } else {
+
+                if (close(p[1]) < 0) {
+                    perror("Failed to close write at main proc");
+                }
+                char buf[buf_size];
+                waitpid(pid, &errno, 0);
+                ssize_t total_read;
+                std::string varbuf;
+                while(true) {
+                     if (readbuffer(p[0], buf_size, buf, total_read) < 0) {
+                         close(p[0]);
+                         std::cerr << "Failed to read buf" << std::endl;
+                         return 3;
+                     }
+                     if (total_read == 0) {
+                         break;
+                     } else {
+                        varbuf.append(buf, buf + total_read);
+                     }
+                }
+
+                close(p[0]);
+                varbuf.pop_back();
+                tree_map[VALUE][i] = varbuf;
+            }
+
+        }
+        status = setenv(tree_map[KEY][i].c_str(), tree_map[VALUE][i].c_str(), 1);
         if (status != 0) {
             return status;
         }
@@ -96,25 +114,11 @@ int mexit(tree_map_t& tree_map) {
         exit(0);
     } else {
         int x;
-        std::stringstream ss(tree_map[ARGS][0]);
-        ss >> x;
+        std::stringstream(tree_map[ARGS][0]) >> x;
         exit(x);
     }
     return 0;
 
-}
-
-ArgsMap<Symbol, std::vector<std::string>> parse_line(std::string& line, const std::string& cwd) {
-
-    init_clean(line);
-    auto syntax = ll1_parser(line.c_str());
-    if (syntax->children.size() == 1) {
-        throw std::runtime_error("bad syntax");
-    }
-
-
-    ArgsMap arg_map(tree2map(syntax->children[0]));
-    return arg_map;
 }
 
 int run_script(const std::string& script) {
@@ -126,15 +130,7 @@ int run_script(const std::string& script) {
         }
         auto cwd = std::filesystem::current_path().string();
         try {
-            std::vector<std::string> line_vector;
-            boost::split( line_vector, line.substr(0, line.size() - line.find('#')), boost::is_any_of("|"));
-            std::vector<ArgsMap<Symbol, std::vector<std::string>>> args_maps;
-            for (auto& st: line_vector) {
-                ArgsMap args_map = parse_line(st, cwd);
-                args_map.get_tree_map()[CURRENT_PATH].push_back(cwd);
-                args_maps.push_back(args_map);
-
-            }
+            auto args_maps = line2argsmap(line, cwd);
 
             if (args_maps.size() == 1) {
                 if (kernel_command(args_maps[0].get_tree_map()) < 0) {
@@ -214,4 +210,3 @@ int kernel_command(tree_map_t& tree_map) {
     }
     return 0;
 }
-#endif // INTER_FUNCTIONS_H
